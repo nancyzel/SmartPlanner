@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartPlanner.Models;
+using SmartPlanner.Services;
 
 namespace SmartPlanner
 {
@@ -14,6 +15,18 @@ namespace SmartPlanner
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
             );
+            builder
+                .Services.AddAuthentication("Cookies")
+                .AddCookie(
+                    "Cookies",
+                    options =>
+                    {
+                        options.LoginPath = "/Account/Login";
+                        options.AccessDeniedPath = "/Account/AccessDenied";
+                    }
+                );
+
+            builder.Services.AddScoped<AuthService>();
 
             var app = builder.Build();
 
@@ -28,6 +41,7 @@ namespace SmartPlanner
             app.UseHttpsRedirection();
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapStaticAssets();

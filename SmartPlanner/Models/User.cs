@@ -21,6 +21,9 @@ namespace SmartPlanner.Models
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
+        [Required]
+        public string Salt { get; set; } = string.Empty;
+
         [StringLength(50)]
         public string? Timezone { get; set; }
 
