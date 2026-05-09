@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using SmartPlanner.Models;
+
 namespace SmartPlanner
 {
     public class Program
@@ -8,6 +11,9 @@ namespace SmartPlanner
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+            );
 
             var app = builder.Build();
 
@@ -26,8 +32,9 @@ namespace SmartPlanner
 
             app.MapStaticAssets();
             app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}"
+                )
                 .WithStaticAssets();
 
             app.Run();
