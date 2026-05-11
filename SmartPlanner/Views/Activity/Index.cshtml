@@ -1,0 +1,67 @@
+﻿@using SmartPlanner.Models.Enums
+@model IEnumerable<SmartPlanner.Models.ActivityLog>
+
+@{
+    ViewData["Title"] = "История действий";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-clock-history me-2"></i> История активности</h2>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Время</th>
+                        <th>Действие</th>
+                        <th>Объект</th>
+                        <th>ID объекта</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        <tr>
+                            <td class="text-muted">@log.Timestamp.ToLocalTime().ToString("g")</td>
+                            <td>
+                                @switch (log.Action)
+                                {
+                                    case ActionType.Create:
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-plus-circle me-1"></i> Создание
+                                        </span>
+                                        break;
+                                    case ActionType.Update:
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                            <i class="bi bi-pencil me-1"></i> Изменение
+                                        </span>
+                                        break;
+                                    case ActionType.Delete:
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                            <i class="bi bi-trash me-1"></i> Удаление
+                                        </span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                <strong class="text-dark">@log.EntityType</strong>
+                            </td>
+                            <td><code class="small text-secondary">#@log.EntityId</code></td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                История действий пока пуста
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

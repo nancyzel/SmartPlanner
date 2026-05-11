@@ -1,0 +1,80 @@
+﻿@model SmartPlanner.Models.TaskItem
+@using SmartPlanner.Models.Enums
+
+@{
+    ViewData["Title"] = "Новая задача";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 shadow-sm p-4 bg-white rounded">
+            <h2 class="mb-4">Создание задачи</h2>
+            
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Title" class="form-label font-weight-bold">Название</label>
+                        <input asp-for="Title" class="form-control" placeholder="Что нужно сделать?" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Description" class="form-label">Описание</label>
+                        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="LifeAreaId" class="form-label">Область жизни</label>
+                    <select asp-for="LifeAreaId" class="form-select" asp-items="ViewBag.LifeAreas">
+                        <option value="">-- Выберите область --</option>
+                    </select>
+                </div>
+
+                <hr />
+
+                <div class="row bg-light p-3 rounded mb-3">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Priority" class="form-label text-primary">⭐ Приоритет (1-5)</label>
+                        <input asp-for="Priority" type="number" class="form-control" min="1" max="5" value="1" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="EnergyRequired" class="form-label text-primary">Энергия (1-5)</label>
+                        <input asp-for="EnergyRequired" type="number" class="form-control" min="1" max="5" value="1" />
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="EstimatedDuration" class="form-label font-weight-bold">Оценка времени (мин)</label>
+                        <input asp-for="EstimatedDuration" type="number" class="form-control" placeholder="Напр: 45" />
+                        <span asp-validation-for="EstimatedDuration" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Deadline" class="form-label">Дедлайн</label>
+                        <input asp-for="Deadline" type="datetime-local" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="IsFlexible" class="form-check-input" type="checkbox" checked />
+                    <label asp-for="IsFlexible" class="form-check-label">
+                        Гибкая задача (разрешить алгоритму перенос)
+                    </label>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a asp-action="Index" class="btn btn-secondary">Назад</a>
+                    <button type="submit" class="btn btn-success px-5">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

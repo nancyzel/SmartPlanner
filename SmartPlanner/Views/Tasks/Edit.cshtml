@@ -1,0 +1,72 @@
+﻿@model SmartPlanner.Models.TaskItem
+@using SmartPlanner.Models.Enums
+
+@{
+    ViewData["Title"] = "Редактирование";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 shadow-sm p-4 bg-white rounded">
+            <h2 class="mb-4">Редактирование задачи</h2>
+            
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="CreatedAt" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Title" class="form-label font-weight-bold">Название</label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Status" class="form-label">Статус</label>
+                        <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<TaskStatusType>()"></select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ProgressPercent" class="form-label">Прогресс (%)</label>
+                        <input asp-for="ProgressPercent" type="range" class="form-range" min="0" max="100" />
+                        <div class="text-center small">@Model.ProgressPercent %</div>
+                    </div>
+                </div>
+
+                <div class="row bg-light p-3 rounded mb-3">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="EstimatedDuration" class="form-label">Ожидаемое время (мин)</label>
+                        <input asp-for="EstimatedDuration" class="form-control" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ActualDuration" class="form-label text-success">Фактическое время (мин)</label>
+                        <input asp-for="ActualDuration" class="form-control" placeholder="Заполните по завершении" />
+                        <small class="text-muted">Важно для обучения ML-модели!</small>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Priority" class="form-label">Приоритет</label>
+                        <input asp-for="Priority" class="form-control" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="EnergyRequired" class="form-label">Энергия</label>
+                        <input asp-for="EnergyRequired" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="Index" class="btn btn-secondary">Отмена</a>
+                    <button type="submit" class="btn btn-primary px-5">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

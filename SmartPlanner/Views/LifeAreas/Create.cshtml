@@ -1,0 +1,40 @@
+﻿@model SmartPlanner.Models.LifeArea
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow-sm p-4 bg-white rounded">
+            <h2 class="mb-4">Создать сферу</h2>
+            
+            <form asp-action="Create" method="post">
+                
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label font-weight-bold">Название</label>
+                    <input asp-for="Name" class="form-control" placeholder="Напр: Работа, Здоровье, Семья" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Color" class="form-label">Цвет сферы</label>
+                        <input asp-for="Color" type="color" class="form-control form-control-color w-100" />
+                        <small class="text-muted">Для выделения в календаре</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Priority" class="form-label">Приоритет (1-5)</label>
+                        <input asp-for="Priority" type="number" class="form-control" min="1" max="5" value="@(Model?.Priority ?? 1)" />
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" checked />
+                    <label asp-for="IsActive" class="form-check-label">Активная сфера</label>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a asp-action="Index" class="btn btn-light border">Отмена</a>
+                    <button type="submit" class="btn btn-primary px-4">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

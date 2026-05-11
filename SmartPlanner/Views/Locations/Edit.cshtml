@@ -1,0 +1,39 @@
+﻿@model SmartPlanner.Models.Location
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 shadow-sm p-4 bg-white rounded">
+            <h2 class="mb-4">Редактировать локацию</h2>
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id" /> <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label fw-bold">Название места</label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Address" class="form-label">Адрес</label>
+                    <input asp-for="Address" class="form-control" />
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="OpeningTime" class="form-label">Открытие</label>
+                        <input asp-for="OpeningTime" type="time" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ClosingTime" class="form-label">Закрытие</label>
+                        <input asp-for="ClosingTime" type="time" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a asp-action="Index" class="btn btn-secondary">Отмена</a>
+                    <button type="submit" class="btn btn-primary px-5">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
