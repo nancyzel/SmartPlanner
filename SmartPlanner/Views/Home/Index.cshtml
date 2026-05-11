@@ -1,8 +1,36 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Главная";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <h2 class="display-6">Добрый день, @User.Identity.Name!</h2>
+        <p class="text-muted">Вот ваше расписание на сегодня.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Календарь</h5>
+            </div>
+            <div class="card-body" style="min-height: 400px;">
+                <!-- Тут будет FullCalendar -->
+                <p class="text-center text-muted mt-5">Загрузка календаря...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Ближайшие задачи</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <!-- Сюда можно вывести топ-3 задачи по приоритету из БД -->
+                <li class="list-group-item">Задач пока нет</li>
+            </ul>
+        </div>
+    </div>
 </div>

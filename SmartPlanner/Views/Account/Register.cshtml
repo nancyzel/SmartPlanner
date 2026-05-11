@@ -22,9 +22,9 @@
             </div>
 
             <div class="mb-3">
-                <label asp-for="PasswordHash" class="form-label">Пароль</label>
-                <input asp-for="PasswordHash" class="form-control" type="password" required />
-                <span asp-validation-for="PasswordHash" class="text-danger"></span>
+                <label name="password" class="form-label">Пароль</label>
+                <input name="password" class="form-control" type="password" required />
+                <span name="password" class="text-danger"></span>
             </div>
 
             <button type="submit" class="btn btn-primary w-100">Зарегистрироваться</button>

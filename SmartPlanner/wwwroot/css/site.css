@@ -1,31 +1,132 @@
+/* Общие настройки страницы */
 html {
-  font-size: 14px;
+    font-size: 14px;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    html {
+        font-size: 16px;
+    }
 }
 
 body {
-  margin-bottom: 60px;
+    overflow-x: hidden;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    /* Убрали margin-bottom, так как футер теперь не фиксированный снизу */
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* Настройки обертки и сайдбара */
+#wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    align-items: stretch;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    min-height: 100vh;
+    height: 100vh;
+    background: #212529;
+    color: #fff;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
 }
+
+    #sidebar .sidebar-header {
+        padding: 20px;
+        background: #1a1d20;
+    }
+
+    #sidebar ul.components {
+        padding: 20px 0;
+    }
+
+    #sidebar ul li a {
+        padding: 10px 20px;
+        display: block;
+        color: #adb5bd;
+        text-decoration: none;
+    }
+
+        #sidebar ul li a:hover,
+        #sidebar ul li.active > a {
+            color: #fff;
+            background: #343a40;
+        }
+
+/* Блок пользователя внизу сайдбара */
+.user-section {
+    margin-top: auto;
+    padding: 20px;
+    background: #1a1d20;
+}
+
+    .user-section .text-muted {
+        color: #adb5bd !important; /* Светло-серый, который хорошо виден на темном */
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .user-section .fw-bold {
+        color: #ffffff; /* Чисто белый для самого имени */
+    }
+
+/* Основной контент справа */
+#content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column; /* Шапка сверху, main снизу */
+    height: 100vh;
+    overflow: hidden; /* Контент не должен вылезать за пределы #content */
+    background: #f8f9fa;
+}
+
+.main-header {
+    flex-shrink: 0;
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 20px;
+}
+
+main[role="main"] {
+    flex-grow: 1;
+    overflow-y: auto; /* Вертикальный скролл появляется только тут */
+    padding: 20px;
+}
+
+/* Стили для стандартных элементов управления */
+.btn-primary {
+    color: #fff;
+    background-color: #1b6ec2;
+    border-color: #1861ac;
+}
+
+.nav-pills .nav-link.active {
+    color: #fff;
+    background-color: #1b6ec2;
+}
+
+.btn:focus, .btn-link.nav-link:focus, .form-control:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+/* Кастомные ссылки */
+a {
+    color: #0077cc;
+    text-decoration: none;
+}
+
+    a:hover {
+        text-decoration: underline;
+    }
