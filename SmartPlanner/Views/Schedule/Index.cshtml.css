@@ -1,0 +1,47 @@
+﻿::deep .fc-event {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+::deep .fc-toolbar-title {
+    font-size: 1.25rem !important;
+    font-weight: bold;
+}
+/* Увеличиваем высоту временного слота (делаем календарь просторнее) */
+::deep .fc-timegrid-slot {
+    height: 3.5em !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+
+/* Красивое оформление событий */
+::deep .fc-event {
+    border: none !important;
+    transition: all 0.2s ease;
+}
+
+    ::deep .fc-event:hover {
+        transform: scale(1.02);
+        z-index: 10;
+    }
+
+::deep .type-event {
+    border-left: 5px solid rgba(0,0,0,0.3) !important; /* Толстая полоса слева */
+    font-weight: 600;
+}
+
+::deep .type-task {
+    opacity: 0.9;
+    border: 1px dashed rgba(255,255,255,0.6) !important; /* Пунктирная рамка */
+    border-radius: 8px !important;
+}
+
+/* Стиль для всплывашки */
+::deep .tippy-box[data-theme~='planner'] {
+    background-color: #333;
+    color: white;
+    padding: 5px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    z-index: 9999 !important; /* ГАРАНТИРУЕТ ПОВЕРХНОСТНОЕ ОТОБРАЖЕНИЕ */
+}

@@ -1,0 +1,124 @@
+﻿@{
+    ViewData["Title"] = "Мой календарь";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🗓️ Умное расписание</h2>
+        <button id="btnGenerate" class="btn btn-warning shadow-sm">
+            🚀 Сгенерировать план на сегодня
+        </button>
+    </div>
+
+    <div class="card shadow-sm p-3 bg-white">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    <script src="https://unpkg.com/@@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridDay',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                locale: 'ru',
+                slotMinTime: '06:00:00',
+                slotMaxTime: '23:00:00',
+                slotDuration: '00:30:00', // Шаг в 30 минут
+                events: '/Schedule/GetEvents',
+                eventClassNames: function(arg) {
+        return [ 'type-' + arg.event.extendedProps.activityType ];
+    },
+                
+                // Главная фишка: создание всплывашки при отрисовке события
+                eventDidMount: function(info) {
+                    // Внутри eventDidMount:
+tippy(info.el, {
+    content: `<strong>${info.event.title}</strong><br/>
+              <small>Сфера: ${info.event.extendedProps.sphere}</small><br/>
+              <hr style="margin: 5px 0"/>
+              ${info.event.extendedProps.description}`,
+    allowHTML: true,
+    theme: 'planner',
+    placement: 'top',
+    interactive: true,
+    delay: [100, 0],
+    appendTo: document.body // ДОБАВЬ ЭТУ СТРОКУ
+});
+                }
+            });
+            calendar.render();
+
+            // Обработка кнопки генерации
+            document.getElementById('btnGenerate').addEventListener('click', function() {
+                this.disabled = true;
+                this.innerHTML = "Генерация...";
+                
+                const today = new Date().toISOString().split('T')[0];
+
+                fetch(`/Schedule/Generate?date=${today}`, {
+                    method: 'POST'
+                }).then(response => {
+                    if (response.ok) {
+                        calendar.refetchEvents(); // Обновить события на календаре
+                        alert("Расписание успешно сформировано!");
+                    }
+                }).finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = "🚀 Сгенерировать план на сегодня";
+                });
+            });
+        });
+    </script>
+
+    @* <style>
+        .fc-event { cursor: pointer; border-radius: 4px; padding: 2px; }
+        .fc-toolbar-title { font-size: 1.25rem !important; font-weight: bold; }
+        /* Увеличиваем высоту временного слота (делаем календарь просторнее) */
+.fc-timegrid-slot {
+    height: 3.5em !important; 
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+
+/* Красивое оформление событий */
+.fc-event {
+    border: none !important;
+    transition: all 0.2s ease;
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+    z-index: 10;
+}
+
+.type-event {
+    border-left: 5px solid rgba(0,0,0,0.3) !important; /* Толстая полоса слева */
+    font-weight: 600;
+}
+
+.type-task {
+    opacity: 0.9;
+    border: 1px dashed rgba(255,255,255,0.6) !important; /* Пунктирная рамка */
+    border-radius: 8px !important;
+}
+
+/* Стиль для всплывашки */
+.tippy-box[data-theme~='planner'] {
+    background-color: #333;
+    color: white;
+    padding: 5px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    z-index: 9999 !important; /* ГАРАНТИРУЕТ ПОВЕРХНОСТНОЕ ОТОБРАЖЕНИЕ */
+}
+    </style> *@
+}
