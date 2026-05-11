@@ -1,36 +1,113 @@
-﻿@{
+﻿@model SmartPlanner.Models.DashboardViewModel
+@{
     ViewData["Title"] = "Главная";
+}
+
+@* Баннер-напоминание о настройках *@
+@if (!Model.HasPreferences)
+{
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+        <div class="flex-grow-1">
+            <strong>Настройте свои предпочтения!</strong>
+            Чтобы алгоритм генерации расписания учитывал ваши биоритмы и рабочие часы, перейдите в настройки.
+        </div>
+        <a asp-controller="UserInformation" asp-action="Index" class="btn btn-info btn-sm shadow-sm">
+            Перейти к настройкам <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
 }
 
 <div class="row">
     <div class="col-md-12 mb-4">
-        <h2 class="display-6">Добрый день, @User.Identity.Name!</h2>
-        <p class="text-muted">Вот ваше расписание на сегодня.</p>
+        <h2 class="display-6 fw-bold">Добрый день, @User.Identity.Name!</h2>
+        <p class="text-muted">Вот краткий обзор ваших дел на сегодня, @DateTime.Now.ToString("d MMMM").</p>
     </div>
 </div>
 
 <div class="row">
+    <!-- Левая колонка -->
     <div class="col-md-8">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">Календарь</h5>
+        <!-- Виджет календаря (мини-версия или список событий) -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-event me-2 text-primary"></i>События на сегодня</h5>
+                <a asp-controller="Schedule" asp-action="Index" class="btn btn-sm btn-outline-primary">Весь календарь</a>
             </div>
-            <div class="card-body" style="min-height: 400px;">
-                <!-- Тут будет FullCalendar -->
-                <p class="text-center text-muted mt-5">Загрузка календаря...</p>
+            <div class="card-body">
+                @if (Model.TodayEvents.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var ev in Model.TodayEvents)
+                        {
+                            <div class="list-group-item d-flex align-items-center px-0">
+                                <div class="me-3 text-center" style="min-width: 60px;">
+                                    <div class="fw-bold">@ev.StartTime.ToLocalTime().ToString("HH:mm")</div>
+                                    <div class="small text-muted">начало</div>
+                                </div>
+                                <div class="vr me-3"></div>
+                                <div>
+                                    <div class="fw-bold">@ev.Title</div>
+                                    <div class="small text-muted">@ev.LifeArea?.Name</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <i class="bi bi-calendar-check text-light" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">На сегодня событий не запланировано</p>
+                    </div>
+                }
             </div>
         </div>
     </div>
     
+    <!-- Правая колонка -->
     <div class="col-md-4">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">Ближайшие задачи</h5>
+        <!-- Виджет Прогресса -->
+        <div class="card border-0 shadow-sm mb-4 bg-primary text-white">
+            <div class="card-body">
+                <h6 class="text-uppercase small opacity-75">Прогресс дня</h6>
+                <h3 class="fw-bold mb-3">@Model.ProgressPercentage%</h3>
+                <div class="progress bg-white bg-opacity-25" style="height: 8px;">
+                    <div class="progress-bar bg-white" style="width: @Model.ProgressPercentage%"></div>
+                </div>
+                <p class="small mt-2 mb-0">Выполнено @Model.CompletedTasksToday из @Model.TotalTasksToday задач</p>
             </div>
-            <ul class="list-group list-group-flush">
-                <!-- Сюда можно вывести топ-3 задачи по приоритету из БД -->
-                <li class="list-group-item">Задач пока нет</li>
-            </ul>
+        </div>
+
+        <!-- Виджет Задач -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">Ближайшие задачи</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                @if (Model.UrgentTasks.Any())
+                {
+                    @foreach (var task in Model.UrgentTasks)
+                    {
+                        <a asp-controller="Tasks" asp-action="Edit" asp-route-id="@task.Id" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 fw-bold text-truncate">@task.Title</h6>
+                                <span class="badge bg-light text-primary border">@task.Priority</span>
+                            </div>
+                            <small class="text-muted">Прогресс: @task.ProgressPercent%</small>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div class="list-group-item text-center py-4 text-muted">
+                        Свободное время! Задач нет.
+                    </div>
+                }
+            </div>
+            <div class="card-footer bg-white border-0">
+                <a asp-controller="Tasks" asp-action="Index" class="btn btn-sm btn-light w-100">Все задачи</a>
+            </div>
         </div>
     </div>
 </div>
