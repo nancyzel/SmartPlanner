@@ -1,5 +1,5 @@
-﻿using SmartPlanner.Models.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using SmartPlanner.Models.Enums;
 
 namespace SmartPlanner.Models
 {
@@ -17,8 +17,6 @@ namespace SmartPlanner.Models
         public string? Description { get; set; }
 
         public ActivityType Type { get; set; }
-
-        public ActivityCategoryType Category { get; set; }
 
         public long? LifeAreaId { get; set; }
 

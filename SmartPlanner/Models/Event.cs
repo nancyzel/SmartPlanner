@@ -1,5 +1,5 @@
-﻿using SmartPlanner.Models.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using SmartPlanner.Models.Enums;
 
 namespace SmartPlanner.Models
 {
@@ -16,8 +16,6 @@ namespace SmartPlanner.Models
         public RecurrenceType? RecurrenceType { get; set; }
 
         public DateTime? RecurrenceEndDate { get; set; }
-
-        // Navigation properties
 
         public Location? Location { get; set; }
     }

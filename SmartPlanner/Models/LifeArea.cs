@@ -22,8 +22,6 @@ namespace SmartPlanner.Models
 
         public bool IsActive { get; set; } = true;
 
-        // Navigation properties
-
         public User User { get; set; } = null!;
 
         public ICollection<Activity> Activities { get; set; } = new List<Activity>();
