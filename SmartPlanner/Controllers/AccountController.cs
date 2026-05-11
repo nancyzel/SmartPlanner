@@ -26,8 +26,9 @@ namespace SmartPlanner.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(User user)
+        public async Task<IActionResult> Register(User user, string password)
         {
+            ModelState.Remove(nameof(user.PasswordHash));
             ModelState.Remove(nameof(user.Salt));
             ModelState.Remove(nameof(user.Activities));
             ModelState.Remove(nameof(user.LifeAreas));
@@ -43,7 +44,7 @@ namespace SmartPlanner.Controllers
                     return View(user);
                 }
 
-                var (hash, salt) = _auth.HashPassword(user.PasswordHash);
+                var (hash, salt) = _auth.HashPassword(password);
 
                 user.PasswordHash = hash;
                 user.Salt = salt;
@@ -63,15 +64,14 @@ namespace SmartPlanner.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string email, string password)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u =>
-                u.Email == email && u.PasswordHash == password
-            );
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
             if (user != null && _auth.Verify(password, user.PasswordHash, user.Salt))
             {
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, user.FullName),
+                    new Claim(ClaimTypes.Email, user.Email),
                     new Claim("UserId", user.Id.ToString()),
                 };
 

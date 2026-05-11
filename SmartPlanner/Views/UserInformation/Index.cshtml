@@ -1,0 +1,106 @@
+﻿@model SmartPlanner.Models.User
+@{
+    ViewData["Title"] = "Личный кабинет";
+}
+
+<div class="container-fluid">
+    <h2 class="mb-4">Настройки аккаунта</h2>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button">Профиль</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="algo-tab" data-bs-toggle="tab" data-bs-target="#algo" type="button">Умное планирование</button>
+        </li>
+    </ul>
+
+    <div class="tab-content p-4 border border-top-0 rounded-bottom bg-white shadow-sm">
+        <div class="tab-pane fade show active" id="profile">
+            <form asp-controller="UserPreference" asp-action="UpdateProfile" method="post">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Полное имя</label>
+                        <input asp-for="FullName" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Никнейм (Short Name)</label>
+                        <input asp-for="ShortName" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input asp-for="Email" class="form-control" readonly />
+                        <div class="form-text">Email нельзя изменить.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Новый пароль</label>
+                        <input type="password" name="newPassword" class="form-control" placeholder="Оставьте пустым, если не хотите менять" />
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Сохранить данные профиля</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="tab-pane fade" id="algo">
+            <form asp-controller="UserPreference" asp-action="UpsertPreference" method="post">
+                <div class="row g-3">
+                    <h5 class="border-bottom pb-2">Рабочее время</h5>
+                    <div class="col-md-6">
+                        <label class="form-label">Начало рабочего дня</label>
+                        <input type="time" name="WorkStartTime"
+                               value="@Model.UserPreference?.WorkStartTime?.ToString(@"hh\:mm")"
+                               class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Конец рабочего дня</label>
+                        <input type="time" name="WorkEndTime"
+                               value="@Model.UserPreference?.WorkEndTime?.ToString(@"hh\:mm")"
+                               class="form-control" />
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mt-4">Пиковая продуктивность (для ML и алгоритма)</h5>
+                    <div class="col-md-6">
+                        <label class="form-label">Начало пика</label>
+                        <input type="time" name="PeakProductivityStart"
+                               value="@Model.UserPreference?.PeakProductivityStart?.ToString(@"hh\:mm")"
+                               class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Конец пика</label>
+                        <input type="time" name="PeakProductivityEnd"
+                               value="@Model.UserPreference?.PeakProductivityEnd?.ToString(@"hh\:mm")"
+                               class="form-control" />
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mt-4">Ограничения и отдых</h5>
+                    <div class="col-md-4">
+                        <label class="form-label">Задач в день (макс.)</label>
+                        <input type="number" name="MaxTasksPerDay" value="@Model.UserPreference?.MaxTasksPerDay" class="form-control" min="1" max="20" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Интервал работы (мин)</label>
+                        <input type="number" name="PreferredBreakInterval" value="@Model.UserPreference?.PreferredBreakInterval" class="form-control" min="15" max="240" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Длительность перерыва (мин)</label>
+                        <input type="number" name="BreakDuration" value="@Model.UserPreference?.BreakDuration" class="form-control" min="1" max="180" />
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-success">Обновить настройки алгоритма</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,47 +1,89 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SmartPlanner</title>
-    <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SmartPlanner.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">SmartPlanner</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
+
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header text-center">
+                <h4>SmartPlanner</h4>
             </div>
+
+            <ul class="list-unstyled components">
+                <li class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Schedule" ? "active" : "")">
+                    <a asp-controller="Schedule" asp-action="Index"><i class="bi bi-calendar3 me-2"></i> Расписание</a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Tasks" ? "active" : "")">
+                    <a asp-controller="Tasks" asp-action="Index"><i class="bi bi-check2-square me-2"></i> Задачи</a>
+                </li>
+                <li>
+                    <a asp-controller="Events" asp-action="Index"><i class="bi bi-flag me-2"></i> Мероприятия</a>
+                </li>
+                <li>
+                    <a asp-controller="LifeAreas" asp-action="Index"><i class="bi bi-heart me-2"></i> Сферы жизни</a>
+                </li>
+                <li>
+                    <a asp-controller="Locations" asp-action="Index"><i class="bi bi-geo-alt me-2"></i> Локации</a>
+                </li>
+            </ul>
+
+            <!-- Блок пользователя внизу -->
+            @if (User.Identity.IsAuthenticated)
+            {
+                <div class="user-section">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-grow-1">
+                            <div class="small text-white-50">Пользователь:</div>
+                            <div class="fw-bold text-truncate text-white">@User.Identity.Name</div>
+                        </div>
+                        <a asp-controller="UserInformation" asp-action="Index" class="btn btn-sm btn-outline-light border-0 me-1" title="Настройки">
+                            <i class="bi bi-gear-fill"></i>
+                        </a>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-light border-0">
+                                <i class="bi bi-box-arrow-right"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
         </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+
+        <!-- Page Content -->
+        <div id="content">
+            <!-- Header -->
+            <header class="main-header d-flex justify-content-between align-items-center">
+                <ul class="nav nav-pills">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")"
+                           asp-controller="Home" asp-action="Index">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Activity" ? "active" : "")"
+                           asp-controller="Activity" asp-action="Index">История изменений</a>
+                    </li>
+                </ul>
+            
+                <div class="d-flex align-items-center">
+                    <span class="text-muted me-3 small">@DateTime.Now.ToString("D")</span>
+                </div>
+            </header>
+
+            <main role="main" class="p-4">
+                @RenderBody()
+            </main>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - SmartPlanner - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
