@@ -10,11 +10,14 @@ namespace SmartPlanner
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
             builder.Services.AddControllersWithViews();
+
+            // Настройка БД
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
             );
+
+            // Аутентификация
             builder
                 .Services.AddAuthentication("Cookies")
                 .AddCookie(
@@ -23,9 +26,11 @@ namespace SmartPlanner
                     {
                         options.LoginPath = "/Account/Login";
                         options.AccessDeniedPath = "/Account/AccessDenied";
+                        options.Cookie.Name = "SmartPlannerAuth"; // Хорошим тоном считается дать имя куки
                     }
                 );
 
+            // Регистрация твоих сервисов
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<ScheduleService>();
             builder.Services.AddScoped<LogService>();
@@ -33,15 +38,36 @@ namespace SmartPlanner
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // --- НОВЫЙ БЛОК: Автоматическая миграция БД ---
+            // Это позволит базе в Neon обновляться сразу при запуске сайта
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    var context = services.GetRequiredService<ApplicationDbContext>();
+                    context.Database.Migrate();
+                }
+                catch (Exception ex)
+                {
+                    // Логируем ошибку, если база недоступна
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Ошибка при применении миграций БД.");
+                }
+            }
+            // ----------------------------------------------
+
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 
             app.UseHttpsRedirection();
+
+            // Если .MapStaticAssets() не подгружает стили, добавь сюда app.UseStaticFiles();
+            app.UseStaticFiles();
+
             app.UseRouting();
 
             app.UseAuthentication();
