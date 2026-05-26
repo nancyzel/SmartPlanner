@@ -1,6 +1,13 @@
 ﻿@model IEnumerable<SmartPlanner.Models.TaskItem>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
+    @if (TempData["MLPrediction"] != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+            <strong>@TempData["MLPrediction"]</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="none" data-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
     <h2>Мои задачи</h2>
     <a asp-action="Create" class="btn btn-success"> + Новая задача</a>
 </div>

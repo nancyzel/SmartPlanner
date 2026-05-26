@@ -23,6 +23,16 @@ namespace SmartPlanner.Controllers
 
         private long CurrentUserId => long.Parse(User.FindFirstValue("UserId")!);
 
+        private async Task<TimeZoneInfo> GetUserTimeZoneAsync()
+        {
+            var tzString = await _context
+                .Users.Where(u => u.Id == CurrentUserId)
+                .Select(u => u.Timezone)
+                .FirstOrDefaultAsync();
+
+            return TimeZoneInfo.FindSystemTimeZoneById(tzString ?? "Asia/Yekaterinburg");
+        }
+
         public async Task<IActionResult> Index()
         {
             var events = await _context
@@ -50,15 +60,31 @@ namespace SmartPlanner.Controllers
 
             if (ModelState.IsValid)
             {
+                var userTimeZone = await GetUserTimeZoneAsync();
+
                 @event.UserId = CurrentUserId;
                 @event.Type = ActivityType.Event;
                 @event.CreatedAt = DateTime.UtcNow;
                 @event.UpdatedAt = DateTime.UtcNow;
 
-                @event.StartTime = @event.StartTime.ToUniversalTime();
-                @event.EndTime = @event.EndTime.ToUniversalTime();
+                // Из формы пришло Unspecified время пользователя. Переводим его в UTC.
+                @event.StartTime = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(@event.StartTime, DateTimeKind.Unspecified),
+                    userTimeZone
+                );
+                @event.EndTime = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(@event.EndTime, DateTimeKind.Unspecified),
+                    userTimeZone
+                );
+
                 if (@event.RecurrenceEndDate.HasValue)
-                    @event.RecurrenceEndDate = @event.RecurrenceEndDate.Value.ToUniversalTime();
+                    @event.RecurrenceEndDate = TimeZoneInfo.ConvertTimeToUtc(
+                        DateTime.SpecifyKind(
+                            @event.RecurrenceEndDate.Value,
+                            DateTimeKind.Unspecified
+                        ),
+                        userTimeZone
+                    );
 
                 _context.Events.Add(@event);
                 await _context.SaveChangesAsync();
@@ -77,6 +103,17 @@ namespace SmartPlanner.Controllers
 
             if (@event == null)
                 return NotFound();
+
+            // Конвертируем UTC из базы данных в локальное время пользователя для отображения в форме редактирования
+            var userTimeZone = await GetUserTimeZoneAsync();
+            @event.StartTime = TimeZoneInfo.ConvertTimeFromUtc(@event.StartTime, userTimeZone);
+            @event.EndTime = TimeZoneInfo.ConvertTimeFromUtc(@event.EndTime, userTimeZone);
+
+            if (@event.RecurrenceEndDate.HasValue)
+                @event.RecurrenceEndDate = TimeZoneInfo.ConvertTimeFromUtc(
+                    @event.RecurrenceEndDate.Value,
+                    userTimeZone
+                );
 
             PopulateLists();
             return View(@event);
@@ -102,23 +139,42 @@ namespace SmartPlanner.Controllers
 
             if (ModelState.IsValid)
             {
-                existingEvent.Type = ActivityType.Event;
+                var userTimeZone = await GetUserTimeZoneAsync();
+
                 existingEvent.Title = @event.Title;
                 existingEvent.Description = @event.Description;
                 existingEvent.LifeAreaId = @event.LifeAreaId;
                 existingEvent.LocationId = @event.LocationId;
-                existingEvent.StartTime = @event.StartTime.ToUniversalTime();
-                existingEvent.EndTime = @event.EndTime.ToUniversalTime();
                 existingEvent.IsRecurring = @event.IsRecurring;
                 existingEvent.RecurrenceType = @event.RecurrenceType;
-                existingEvent.RecurrenceEndDate = @event.RecurrenceEndDate?.ToUniversalTime();
                 existingEvent.EnergyRequired = @event.EnergyRequired;
                 existingEvent.UpdatedAt = DateTime.UtcNow;
+
+                // Конвертируем измененное локальное время формы обратно в UTC для базы данных
+                existingEvent.StartTime = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(@event.StartTime, DateTimeKind.Unspecified),
+                    userTimeZone
+                );
+                existingEvent.EndTime = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(@event.EndTime, DateTimeKind.Unspecified),
+                    userTimeZone
+                );
+
+                if (@event.RecurrenceEndDate.HasValue)
+                    existingEvent.RecurrenceEndDate = TimeZoneInfo.ConvertTimeToUtc(
+                        DateTime.SpecifyKind(
+                            @event.RecurrenceEndDate.Value,
+                            DateTimeKind.Unspecified
+                        ),
+                        userTimeZone
+                    );
+                else
+                    existingEvent.RecurrenceEndDate = null;
 
                 try
                 {
                     await _context.SaveChangesAsync();
-                    await _log.LogAsync(ActionType.Create, "Мероприятие", @event.Id);
+                    await _log.LogAsync(ActionType.Update, "Мероприятие", @event.Id);
                     return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateException)

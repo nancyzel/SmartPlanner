@@ -19,22 +19,44 @@ namespace SmartPlanner.Services
 
         public async Task GenerateDailyScheduleAsync(long userId, DateTime date)
         {
-            DateTime utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
-            // 1. Получаем предпочтения пользователя (или используем значения по умолчанию)
+            // 0. Получаем часовой пояс пользователя (берём из БД или ставим дефолт UTC+5)
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var userZoneStr = user?.Timezone ?? "Asia/Yekaterinburg";
+            var userTimeZone = TimeZoneInfo.FindSystemTimeZoneById(userZoneStr);
+
+            // 1. Получаем предпочтения пользователя
             var prefs = await _context.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId);
 
             var workStart = prefs?.WorkStartTime ?? TimeSpan.FromHours(8);
             var workEnd = prefs?.WorkEndTime ?? TimeSpan.FromHours(22);
-            var dayStart = utcDate.Date.Add(workStart);
-            var dayEnd = utcDate.Date.Add(workEnd);
+
+            // ВАЖНО: Формируем границы рабочего дня в ЛОКАЛЬНОМ времени пользователя
+            var localDate = date.Date; // Например, 26.05.2026 00:00:00
+            var localDayStart = localDate.Add(workStart); // 26.05.2026 08:00:00
+            var localDayEnd = localDate.Add(workEnd); // 26.05.2026 22:00:00
+
+            // Переводим границы в UTC для работы с базой данных
+            DateTime dayStartUtc = TimeZoneInfo.ConvertTimeToUtc(localDayStart, userTimeZone);
+            DateTime dayEndUtc = TimeZoneInfo.ConvertTimeToUtc(localDayEnd, userTimeZone);
 
             int maxTasks = prefs?.MaxTasksPerDay ?? 10;
             int breakDuration = prefs?.BreakDuration ?? 15;
-            int breakInterval = prefs?.PreferredBreakInterval ?? 120; // Например, каждые 2 часа
+            int breakInterval = prefs?.PreferredBreakInterval ?? 120;
 
-            // 2. Получаем жесткие события (Events)
+            // Вычисляем полные локальные сутки пользователя в формате UTC для фильтрации жестких событий
+            DateTime startOfLocalDayUtc = TimeZoneInfo.ConvertTimeToUtc(localDate, userTimeZone);
+            DateTime endOfLocalDayUtc = TimeZoneInfo.ConvertTimeToUtc(
+                localDate.AddDays(1),
+                userTimeZone
+            );
+
+            // 2. Получаем жесткие события (Events), попадающие в локальные сутки пользователя
             var events = await _context
-                .Events.Where(e => e.UserId == userId && e.StartTime.Date == utcDate.Date)
+                .Events.Where(e =>
+                    e.UserId == userId
+                    && e.StartTime >= startOfLocalDayUtc
+                    && e.StartTime < endOfLocalDayUtc
+                )
                 .OrderBy(e => e.StartTime)
                 .ToListAsync();
 
@@ -43,19 +65,20 @@ namespace SmartPlanner.Services
                 .Tasks.Where(t => t.UserId == userId && t.Status != TaskStatusType.Done)
                 .ToListAsync();
 
-            // 4. Базовый расчет весов (Приоритет + Дедлайн)
+            // 4. Расчет весов (передаем localDate для корректного расчета дней до дедлайна)
             var weightedTasks = tasks
-                .Select(t => new { Task = t, BaseWeight = CalculateBaseWeight(t, utcDate) })
+                .Select(t => new { Task = t, BaseWeight = CalculateBaseWeight(t, localDate) })
                 .ToList();
 
-            // 5. Очищаем старое сгенерированное расписание
+            // 5. Очищаем старое расписание именно за эти сутки
             var oldEntries = _context.ScheduleEntries.Where(s =>
-                s.UserId == userId && s.StartAt.Date == utcDate.Date
+                s.UserId == userId
+                && s.StartAt >= startOfLocalDayUtc
+                && s.StartAt < endOfLocalDayUtc
             );
             _context.ScheduleEntries.RemoveRange(oldEntries);
 
             // 6. Создаем "занятые" слоты из Events
-
             var schedule = new List<ScheduleEntry>();
             foreach (var ev in events)
             {
@@ -64,7 +87,7 @@ namespace SmartPlanner.Services
                     {
                         UserId = userId,
                         ActivityId = ev.Id,
-                        StartAt = ev.StartTime,
+                        StartAt = ev.StartTime, // Они уже сохранены в UTC
                         EndAt = ev.EndTime,
                         Status = ScheduleEntryStatus.Planned,
                         GenerationSource = GenerationSourceType.Manual,
@@ -72,11 +95,11 @@ namespace SmartPlanner.Services
                 );
             }
 
-            // 7. Алгоритм заполнения "окон" задачами
-            DateTime currentPointer = dayStart;
+            // 7. Алгоритм заполнения "окон" (работаем в UTC по указателю currentPointer)
+            DateTime currentPointer = dayStartUtc;
 
             var overlappingEvent = schedule
-                .Where(s => s.StartAt <= dayStart && s.EndAt > dayStart)
+                .Where(s => s.StartAt <= dayStartUtc && s.EndAt > dayStartUtc)
                 .OrderByDescending(s => s.EndAt)
                 .FirstOrDefault();
 
@@ -89,57 +112,60 @@ namespace SmartPlanner.Services
             int tasksScheduledToday = 0;
             int continuousWorkMinutes = 0;
 
-            while (currentPointer < dayEnd && weightedTasks.Any() && tasksScheduledToday < maxTasks)
+            while (
+                currentPointer < dayEndUtc && weightedTasks.Any() && tasksScheduledToday < maxTasks
+            )
             {
                 var activeOrNextSlot = schedule
-                    .Where(s => s.EndAt > currentPointer) // Нас интересует всё, что заканчивается позже текущего момента
+                    .Where(s => s.EndAt > currentPointer)
                     .OrderBy(s => s.StartAt)
                     .FirstOrDefault();
 
-                // 2. Если мы сейчас находимся ВНУТРИ мероприятия (курсор попал на его время)
                 if (activeOrNextSlot != null && activeOrNextSlot.StartAt <= currentPointer)
                 {
-                    currentPointer = activeOrNextSlot.EndAt; // Прыгаем в конец мероприятия
+                    currentPointer = activeOrNextSlot.EndAt;
                     continuousWorkMinutes = 0;
                     continue;
                 }
 
-                // 3. Если мероприятий впереди нет — свободны до конца дня. Если есть — до его начала.
-                DateTime nextBusyTime = activeOrNextSlot?.StartAt ?? dayEnd;
+                DateTime nextBusyTime = activeOrNextSlot?.StartAt ?? dayEndUtc;
                 int gapMinutes = (int)(nextBusyTime - currentPointer).TotalMinutes;
 
-                // 4. Если окно слишком маленькое (меньше 15 минут) до следующего события
                 if (gapMinutes < 15)
                 {
                     if (activeOrNextSlot != null)
                     {
-                        currentPointer = activeOrNextSlot.EndAt; // Сразу перепрыгиваем это маленькое окно и само событие
+                        currentPointer = activeOrNextSlot.EndAt;
                         continuousWorkMinutes = 0;
                         continue;
                     }
                 }
 
-                // Проверка на необходимость длительного перерыва
                 if (continuousWorkMinutes >= breakInterval)
                 {
                     if (gapMinutes >= breakDuration)
                     {
                         currentPointer = currentPointer.AddMinutes(breakDuration);
-                        continuousWorkMinutes = 0; // Сбрасываем счетчик непрерывной работы
-                        continue; // Идем на следующий круг, чтобы пересчитать gapMinutes
+                        continuousWorkMinutes = 0;
+                        continue;
                     }
                     else
                     {
-                        // В этом окне нет места для перерыва, прыгаем сразу за событие
                         currentPointer = nextBusyTime;
-                        continuousWorkMinutes = 0; // Событие/сдвиг считается сменой деятельности (перерывом от задач)
+                        continuousWorkMinutes = 0;
                         continue;
                     }
                 }
 
-                if (gapMinutes >= 15) // Минимальный слот для планирования
+                if (gapMinutes >= 15)
                 {
-                    var currentTimeOfDay = currentPointer.TimeOfDay;
+                    // ДЛЯ УЧЕТА БИОРИТМОВ переводим UTC-указатель обратно в ЛОКАЛЬНОЕ время пользователя
+                    DateTime localCurrentPointer = TimeZoneInfo.ConvertTimeFromUtc(
+                        currentPointer,
+                        userTimeZone
+                    );
+                    var currentTimeOfDay = localCurrentPointer.TimeOfDay;
+
                     bool isPeakTime =
                         prefs != null
                         && prefs.PeakProductivityStart.HasValue
@@ -147,27 +173,17 @@ namespace SmartPlanner.Services
                         && currentTimeOfDay >= prefs.PeakProductivityStart.Value
                         && currentTimeOfDay <= prefs.PeakProductivityEnd.Value;
 
-                    // Динамический скоринг задач конкретно под текущее время (currentPointer)
                     var bestTaskMatch = weightedTasks
                         .Where(t => t.Task.EstimatedDuration <= gapMinutes)
                         .OrderByDescending(t =>
                         {
                             double dynamicScore = t.BaseWeight;
-
-                            // Бонус 1: Чередование сфер жизни
                             if (t.Task.LifeAreaId != lastLifeAreaId)
                                 dynamicScore += 10;
-
-                            // Бонус 2: Учет биоритмов (Пиковая продуктивность)
                             if (isPeakTime && t.Task.EnergyRequired >= 4)
-                            {
-                                dynamicScore += 15; // Ресурсоемкие задачи в пиковое время
-                            }
+                                dynamicScore += 15;
                             else if (!isPeakTime && t.Task.EnergyRequired <= 2)
-                            {
-                                dynamicScore += 5; // Легкие задачи (рутина) вне пика
-                            }
-
+                                dynamicScore += 5;
                             return dynamicScore;
                         })
                         .FirstOrDefault();
@@ -192,7 +208,6 @@ namespace SmartPlanner.Services
                             }
                         );
 
-                        // Обновляем счетчики и указатели
                         currentPointer = currentPointer.AddMinutes(task.EstimatedDuration + 5);
                         continuousWorkMinutes += task.EstimatedDuration;
                         lastLifeAreaId = task.LifeAreaId;
@@ -203,7 +218,6 @@ namespace SmartPlanner.Services
                     }
                 }
 
-                // Если не нашли задачу для текущего окна или окно слишком маленькое, двигаемся к концу этого препятствия
                 var nextEvent = schedule
                     .Where(s => s.StartAt >= currentPointer)
                     .OrderBy(s => s.StartAt)
@@ -211,11 +225,11 @@ namespace SmartPlanner.Services
                 if (nextEvent != null)
                 {
                     currentPointer = nextEvent.EndAt;
-                    continuousWorkMinutes = 0; // Событие обнуляет счетчик непрерывной фокусной работы
+                    continuousWorkMinutes = 0;
                 }
                 else
                 {
-                    break; // Нет ни событий, ни подходящих задач
+                    break;
                 }
             }
 
@@ -225,14 +239,18 @@ namespace SmartPlanner.Services
 
         private double CalculateBaseWeight(TaskItem task, DateTime targetDate)
         {
+            // вес по приоритету задачи
             double weight = task.Priority * PriorityWeight;
 
             if (task.Deadline.HasValue)
             {
                 double daysUntilDeadline = (task.Deadline.Value - targetDate).TotalDays;
+
                 if (daysUntilDeadline <= 0)
-                    weight += 15; // Просрочено - наивысший приоритет
+                    // если задача просрочена, к ней повышенное внимание
+                    weight += 15;
                 else
+                    // вес по срочности задачи
                     weight += (1.0 / daysUntilDeadline) * UrgencyWeight * 10;
             }
 

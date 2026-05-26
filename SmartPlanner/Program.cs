@@ -34,6 +34,7 @@ namespace SmartPlanner
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<ScheduleService>();
             builder.Services.AddScoped<LogService>();
+            builder.Services.AddScoped<TaskPredictorService>();
             builder.Services.AddHttpContextAccessor();
 
             var app = builder.Build();

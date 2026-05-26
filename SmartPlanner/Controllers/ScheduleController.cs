@@ -33,7 +33,6 @@ namespace SmartPlanner.Controllers
             return Ok();
         }
 
-        // Данные для FullCalendar (вызывается самим календарем через JS)
         [HttpGet]
         public async Task<JsonResult> GetEvents(DateTime start, DateTime end)
         {
@@ -41,7 +40,7 @@ namespace SmartPlanner.Controllers
 
             var scheduleEntries = await _context
                 .ScheduleEntries.Include(s => s.Activity)
-                    .ThenInclude(a => a.LifeArea) // Важно: подгружаем сферу!
+                    .ThenInclude(a => a.LifeArea)
                 .Where(s => s.UserId == userId && s.StartAt >= start && s.EndAt <= end)
                 .ToListAsync();
 
@@ -49,17 +48,17 @@ namespace SmartPlanner.Controllers
             {
                 id = s.Id,
                 title = GetActivityTitle(s.Activity),
-                start = s.StartAt.ToString("s"),
-                end = s.EndAt.ToString("s"),
+                // ВАЖНО: Добавляем суффикс 'Z', чтобы FullCalendar понял, что это UTC
+                start = s.StartAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                end = s.EndAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                 backgroundColor = s.Activity?.LifeArea?.Color ?? "#5c6bc0",
                 borderColor = "rgba(0,0,0,0.1)",
                 allDay = false,
-                // Добавляем тип активности для CSS классов
                 extendedProps = new
                 {
                     description = s.Activity?.Description ?? "Нет описания",
                     sphere = s.Activity?.LifeArea?.Name ?? "Общее",
-                    activityType = s.Activity?.Type.ToString().ToLower(), // "task" или "event"
+                    activityType = s.Activity?.Type.ToString().ToLower(),
                 },
             });
 
@@ -74,6 +73,46 @@ namespace SmartPlanner.Controllers
             string icon = activity.Type == ActivityType.Task ? "📝 " : "📅 ";
 
             return icon + activity.Title;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateEventTime(long id, DateTime start, DateTime end)
+        {
+            var userId = CurrentUserId;
+
+            var entry = await _context
+                .ScheduleEntries.Include(s => s.Activity)
+                .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
+
+            if (entry == null)
+                return NotFound();
+
+            // Из JS (.toISOString()) гарантированно приходит UTC время.
+            // Приводим к UniversalTime и явно размечаем как Utc для Npgsql
+            var newStart = DateTime.SpecifyKind(start.ToUniversalTime(), DateTimeKind.Utc);
+            var newEnd = DateTime.SpecifyKind(end.ToUniversalTime(), DateTimeKind.Utc);
+
+            entry.StartAt = newStart;
+            entry.EndAt = newEnd;
+            entry.UpdatedAt = DateTime.UtcNow;
+            entry.GenerationSource = GenerationSourceType.Manual;
+
+            if (entry.Activity.Type == ActivityType.Event)
+            {
+                var sourceEvent = await _context.Events.FirstOrDefaultAsync(e =>
+                    e.Id == entry.ActivityId && e.UserId == userId
+                );
+
+                if (sourceEvent != null)
+                {
+                    sourceEvent.StartTime = newStart;
+                    sourceEvent.EndTime = newEnd;
+                    _context.Events.Update(sourceEvent);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true });
         }
     }
 }

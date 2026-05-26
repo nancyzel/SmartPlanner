@@ -1,82 +1,137 @@
 ﻿@{
     ViewData["Title"] = "Мой календарь";
 }
+<div class="calendar-page-wrapper">
+    <div class="container" style="height: 100%; padding-top: 15px;">
+        <div class="d-flex justify-content-between align-items-center" style="margin-bottom: 15px;">
+            <h2>🗓️ Умное расписание</h2>
+            <button id="btnGenerate" class="btn btn-warning shadow-sm">
+                Сгенерировать план на сегодня
+            </button>
+        </div>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>🗓️ Умное расписание</h2>
-        <button id="btnGenerate" class="btn btn-warning shadow-sm">
-            🚀 Сгенерировать план на сегодня
-        </button>
-    </div>
-
-    <div class="card shadow-sm p-3 bg-white">
-        <div id="calendar"></div>
+        <div class="card shadow-sm p-3 bg-white" style="flex-grow: 1; overflow: hidden;">
+            <div id="calendar"></div>
+        </div>
     </div>
 </div>
+
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <script src="https://unpkg.com/@@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridDay',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                locale: 'ru',
-                slotMinTime: '06:00:00',
-                slotMaxTime: '23:00:00',
-                slotDuration: '00:30:00', // Шаг в 30 минут
-                events: '/Schedule/GetEvents',
-                eventClassNames: function(arg) {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridDay',
+        headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        locale: 'ru',
+        slotMinTime: '00:00:00',
+        slotMaxTime: '24:00:00',
+        slotDuration: '00:30:00',
+        events: '/Schedule/GetEvents',
+
+        // === НАСТРОЙКИ DRAG & DROP ===
+        editable: true,               // Включает возможность перетаскивания и изменения размеров
+        eventStartEditable: true,      // Разрешает изменять время начала (перетаскивать)
+        eventDurationEditable: true,   // Разрешает менять длительность (растягивать)
+
+        // Срабатывает, когда событие перетащили на другое время/день
+        eventDrop: function(info) {
+        updateEventOnServer(info);
+        },
+
+        // Срабатывает, когда изменили длительность события (растянули/сузили)
+        eventResize: function(info) {
+        updateEventOnServer(info);
+        },
+        // =============================
+
+        eventClassNames: function(arg) {
         return [ 'type-' + arg.event.extendedProps.activityType ];
-    },
-                
-                // Главная фишка: создание всплывашки при отрисовке события
-                eventDidMount: function(info) {
-                    // Внутри eventDidMount:
-tippy(info.el, {
-    content: `<strong>${info.event.title}</strong><br/>
-              <small>Сфера: ${info.event.extendedProps.sphere}</small><br/>
-              <hr style="margin: 5px 0"/>
-              ${info.event.extendedProps.description}`,
-    allowHTML: true,
-    theme: 'planner',
-    placement: 'top',
-    interactive: true,
-    delay: [100, 0],
-    appendTo: document.body // ДОБАВЬ ЭТУ СТРОКУ
-});
-                }
-            });
-            calendar.render();
+        },
 
-            // Обработка кнопки генерации
-            document.getElementById('btnGenerate').addEventListener('click', function() {
-                this.disabled = true;
-                this.innerHTML = "Генерация...";
-                
-                const today = new Date().toISOString().split('T')[0];
+        eventDidMount: function(info) {
+        tippy(info.el, {
+        content: `<strong>${info.event.title}</strong><br/>
+        <small>Сфера: ${info.event.extendedProps.sphere}</small><br/>
+        <hr style="margin: 5px 0"/>
+        ${info.event.extendedProps.description}`,
+        allowHTML: true,
+        theme: 'planner',
+        placement: 'top',
+        interactive: true,
+        delay: [100, 0],
+        appendTo: document.body
+        });
+        }
+        });
+        calendar.render();
 
-                fetch(`/Schedule/Generate?date=${today}`, {
-                    method: 'POST'
-                }).then(response => {
-                    if (response.ok) {
-                        calendar.refetchEvents(); // Обновить события на календаре
-                        alert("Расписание успешно сформировано!");
-                    }
-                }).finally(() => {
-                    this.disabled = false;
-                    this.innerHTML = "🚀 Сгенерировать план на сегодня";
-                });
-            });
+        // Функция отправки изменений на сервер
+        function updateEventOnServer(info) {
+        const id = info.event.id;
+        const start = info.event.start.toISOString();
+        // У некоторых событий (например, на весь день) может не быть end, подстрахуемся
+        const end = info.event.end ? info.event.end.toISOString() : start;
+
+        // Формируем параметры для x-www-form-urlencoded (простой POST запрос)
+        const params = new URLSearchParams();
+        params.append('id', id);
+        params.append('start', start);
+        params.append('end', end);
+
+        fetch('/Schedule/UpdateEventTime', {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params
+        })
+        .then(response => {
+        if (!response.ok) {
+        throw new Error('Сервер отклонил изменения или произошла ошибка.');
+        }
+        return response.json();
+        })
+        .then(data => {
+        // Опционально: можно выводить красивый toast об успешном сохранении
+        console.log('Успешно сохранено:', data.message);
+        })
+        .catch(error => {
+        // ВАЖНО: Если сервер вернул ошибку (например, БД недоступна),
+        // метод info.revert() вернет событие на его исходное место в календаре!
+        alert("Ошибка сохранения: " + error.message);
+        info.revert();
+        });
+        }
+
+        // Обработка кнопки генерации (код без изменений)
+        document.getElementById('btnGenerate').addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = "Генерация...";
+
+        const today = new Date().toISOString().split('T')[0];
+
+        fetch(`/Schedule/Generate?date=${today}`, {
+        method: 'POST'
+        }).then(response => {
+        if (response.ok) {
+        calendar.refetchEvents();
+        alert("Расписание успешно сформировано!");
+        }
+        }).finally(() => {
+        this.disabled = false;
+        this.innerHTML = "Сгенерировать план на сегодня";
+        });
+        });
         });
     </script>
 }

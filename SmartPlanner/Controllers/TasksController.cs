@@ -14,14 +14,30 @@ namespace SmartPlanner.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly LogService _log;
+        private readonly TaskPredictorService _mlService;
 
-        public TasksController(ApplicationDbContext context, LogService log)
+        public TasksController(
+            ApplicationDbContext context,
+            LogService log,
+            TaskPredictorService mlService
+        )
         {
             _context = context;
             _log = log;
+            _mlService = mlService;
         }
 
         private long CurrentUserId => long.Parse(User.FindFirstValue("UserId")!);
+
+        private async Task<TimeZoneInfo> GetUserTimeZoneAsync()
+        {
+            var tzString = await _context
+                .Users.Where(u => u.Id == CurrentUserId)
+                .Select(u => u.Timezone)
+                .FirstOrDefaultAsync();
+
+            return TimeZoneInfo.FindSystemTimeZoneById(tzString ?? "Asia/Yekaterinburg");
+        }
 
         public async Task<IActionResult> Index()
         {
@@ -52,14 +68,44 @@ namespace SmartPlanner.Controllers
 
             if (ModelState.IsValid)
             {
+                var userTimeZone = await GetUserTimeZoneAsync();
                 task.UserId = CurrentUserId;
                 task.Type = ActivityType.Task;
                 task.CreatedAt = DateTime.UtcNow;
                 task.UpdatedAt = DateTime.UtcNow;
-                task.Deadline = task.Deadline?.ToUniversalTime();
+                if (task.Deadline.HasValue)
+                    task.Deadline = TimeZoneInfo.ConvertTimeToUtc(
+                        DateTime.SpecifyKind(task.Deadline.Value, DateTimeKind.Unspecified),
+                        userTimeZone
+                    );
+                int mlPredictedDuration = _mlService.PredictDuration(task);
+                int userPredictedDuration = task.EstimatedDuration;
+                bool isPredictionDifferent = mlPredictedDuration != userPredictedDuration;
+
+                if (isPredictionDifferent)
+                {
+                    task.EstimatedDuration = mlPredictedDuration;
+                }
 
                 _context.Tasks.Add(task);
                 await _context.SaveChangesAsync();
+
+                var mlLog = new MLTrainingData
+                {
+                    TaskItemId = task.Id,
+                    PredictedDuration = mlPredictedDuration,
+                    ActualDuration = task.EstimatedDuration,
+                    PredictionError = 0,
+                };
+                _context.MLTrainingData.Add(mlLog);
+                await _context.SaveChangesAsync();
+
+                if (isPredictionDifferent)
+                {
+                    TempData["MLPrediction"] =
+                        $"AI-Ассистент: Мы скорректировали ваш прогноз с {userPredictedDuration} на {mlPredictedDuration} мин. на основе анализа ваших прошлых задач.";
+                }
+
                 await _log.LogAsync(ActionType.Create, "Задача", task.Id);
                 return RedirectToAction(nameof(Index));
             }
@@ -79,6 +125,12 @@ namespace SmartPlanner.Controllers
 
             if (task == null)
                 return NotFound();
+
+            if (task.Deadline.HasValue)
+            {
+                var userTimeZone = await GetUserTimeZoneAsync();
+                task.Deadline = TimeZoneInfo.ConvertTimeFromUtc(task.Deadline.Value, userTimeZone);
+            }
 
             ViewBag.LifeAreas = new SelectList(
                 _context.LifeAreas.Where(u => u.UserId == CurrentUserId),
@@ -106,6 +158,11 @@ namespace SmartPlanner.Controllers
 
             if (ModelState.IsValid)
             {
+                var userTimeZone = await GetUserTimeZoneAsync();
+                bool isJustFinished = (
+                    task.Status == TaskStatusType.Done && existingTask.Status != TaskStatusType.Done
+                );
+
                 existingTask.Type = ActivityType.Task;
                 existingTask.Title = task.Title;
                 existingTask.Description = task.Description;
@@ -120,9 +177,50 @@ namespace SmartPlanner.Controllers
                 existingTask.EstimatedDuration = task.EstimatedDuration;
                 existingTask.ActualDuration = task.ActualDuration;
                 existingTask.IsFlexible = task.IsFlexible;
+
+                if (task.Deadline.HasValue)
+                    existingTask.Deadline = TimeZoneInfo.ConvertTimeToUtc(
+                        DateTime.SpecifyKind(task.Deadline.Value, DateTimeKind.Unspecified),
+                        userTimeZone
+                    );
+                else
+                    existingTask.Deadline = null;
                 try
                 {
                     await _context.SaveChangesAsync();
+
+                    if (isJustFinished && existingTask.ActualDuration.HasValue)
+                    {
+                        var mlLog = await _context.MLTrainingData.FirstOrDefaultAsync(m =>
+                            m.TaskItemId == existingTask.Id
+                        );
+
+                        if (mlLog != null)
+                        {
+                            mlLog.ActualDuration = existingTask.ActualDuration.Value;
+                            mlLog.PredictionError = Math.Abs(
+                                mlLog.PredictedDuration - mlLog.ActualDuration
+                            );
+                            _context.MLTrainingData.Update(mlLog);
+                            await _context.SaveChangesAsync();
+                        }
+
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var optionsBuilder =
+                                    new DbContextOptionsBuilder<ApplicationDbContext>();
+                            }
+                            catch
+                            {
+                                //логгирование ошибок
+                            }
+                        });
+
+                        await _mlService.TrainModelAsync();
+                    }
+
                     await _log.LogAsync(ActionType.Update, "Задача", task.Id);
                     return RedirectToAction(nameof(Index));
                 }

@@ -1,10 +1,31 @@
-/* Общие настройки страницы */
+/* ==========================================================================
+   1. Новая цветовая палитра приложения (Переменные для удобства)
+   ========================================================================== */
+:root {
+    --bg-main: #f4f6f8; /* Мягкий светлый фон для контента (вместо #f8f9fa) */
+    --bg-card: #ffffff; /* Чистый белый для блоков, карточек и шапки */
+    /* Сайдбар: глубокий грифельный с легким сине-зеленым подтоном */
+    --bg-sidebar: #1e262f; /* Основной фон сайдбара */
+    --bg-sidebar-dark: #161c22; /* Хедер и юзер-секция сайдбара */
+    --text-sidebar-muted: #8a99a8; /* Неактивные пункты меню */
+    /* Акцентный цвет (вместо дефолтного синего) — благородный изумрудно-шалфейный */
+    --accent-color: #2a7f60; /* Основной акцент (кнопки, активные вкладки) */
+    --accent-hover: #206149; /* Кнопки при наведении */
+    --accent-light: #e6f2ed; /* Фоновое выделение активных элементов (nav-pills) */
+    --accent-focus: rgba(42, 127, 96, 0.25);
+    --border-color: #e2e8f0; /* Тонкие аккуратные границы */
+    --text-main: #334155; /* Основной текст контента (мягкий темно-серый) */
+}
+
+/* ==========================================================================
+   2. Общие настройки страницы
+   ========================================================================== */
 html {
     font-size: 14px;
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    
 }
 
 @media (min-width: 768px) {
@@ -18,10 +39,14 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
-    /* Убрали margin-bottom, так как футер теперь не фиксированный снизу */
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Настройки обертки и сайдбара */
+/* ==========================================================================
+   3. Настройки обертки и сайдбара
+   ========================================================================== */
 #wrapper {
     display: flex;
     width: 100%;
@@ -34,99 +59,164 @@ body {
     max-width: 250px;
     min-height: 100vh;
     height: 100vh;
-    background: #212529;
+    background: var(--bg-sidebar);
     color: #fff;
     transition: all 0.3s;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
 }
 
     #sidebar .sidebar-header {
-        padding: 20px;
-        background: #1a1d20;
+        padding: 24px 20px;
+        background: var(--bg-sidebar-dark);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
+
+        #sidebar .sidebar-header h4 {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin: 0;
+            background: linear-gradient(45deg, #fff, var(--text-sidebar-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
     #sidebar ul.components {
-        padding: 20px 0;
+        padding: 20px 12px; /* Небольшой отступ по бокам для эффекта "плавающих" кнопок */
     }
 
-    #sidebar ul li a {
-        padding: 10px 20px;
-        display: block;
-        color: #adb5bd;
-        text-decoration: none;
+    #sidebar ul li {
+        margin-bottom: 4px;
     }
 
-        #sidebar ul li a:hover,
+        #sidebar ul li a {
+            padding: 12px 16px;
+            display: block;
+            color: var(--text-sidebar-muted);
+            text-decoration: none;
+            border-radius: 8px; /* Современные скругленные пункты меню */
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+            #sidebar ul li a i {
+                font-size: 1.1rem;
+                vertical-align: middle;
+            }
+
+            /* Эффект при наведении и активный пункт */
+            #sidebar ul li a:hover {
+                color: #fff;
+                background: rgba(255, 255, 255, 0.05);
+            }
+
         #sidebar ul li.active > a {
             color: #fff;
-            background: #343a40;
+            background: var(--accent-color);
+            box-shadow: 0 4px 12px rgba(42, 127, 96, 0.3);
         }
 
 /* Блок пользователя внизу сайдбара */
 .user-section {
     margin-top: auto;
     padding: 20px;
-    background: #1a1d20;
+    background: var(--bg-sidebar-dark);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-    .user-section .text-muted {
-        color: #adb5bd !important; /* Светло-серый, который хорошо виден на темном */
-        font-size: 0.8rem;
+    .user-section .small {
+        color: var(--text-sidebar-muted) !important;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
     }
 
     .user-section .fw-bold {
-        color: #ffffff; /* Чисто белый для самого имени */
+        color: #ffffff;
+        font-size: 0.95rem;
     }
 
-/* Основной контент справа */
+/* ==========================================================================
+   4. Основной контент справа
+   ========================================================================== */
 #content {
     flex-grow: 1;
     display: flex;
-    flex-direction: column; /* Шапка сверху, main снизу */
+    flex-direction: column;
     height: 100vh;
-    overflow: hidden; /* Контент не должен вылезать за пределы #content */
-    background: #f8f9fa;
+    overflow: hidden;
+    background: var(--bg-main);
 }
 
 .main-header {
     flex-shrink: 0;
-    background: #fff;
-    border-bottom: 1px solid #dee2e6;
-    padding: 10px 20px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 24px;
 }
 
 main[role="main"] {
     flex-grow: 1;
-    overflow-y: auto; /* Вертикальный скролл появляется только тут */
-    padding: 20px;
+    overflow-y: auto;
+    padding: 24px;
 }
 
-/* Стили для стандартных элементов управления */
+/* ==========================================================================
+   5. Переопределение стандартных компонентов и кнопок
+   ========================================================================== */
+/* Кнопки */
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    font-weight: 500;
+    border-radius: 6px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
 }
 
-.nav-pills .nav-link.active {
-    color: #fff;
-    background-color: #1b6ec2;
+    .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+        background-color: var(--accent-hover) !important;
+        border-color: var(--accent-hover) !important;
+        box-shadow: 0 4px 12px rgba(42, 127, 96, 0.2) !important;
+    }
+
+/* Навигация в шапке (Главная / История изменений) */
+.nav-pills .nav-link {
+    color: var(--text-main);
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
+    .nav-pills .nav-link:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+        color: #000;
+    }
+
+    .nav-pills .nav-link.active {
+        color: var(--accent-color);
+        background-color: var(--accent-light); /* Нежное фоновое выделение вместо агрессивного синего */
+        font-weight: 600;
+    }
+
+/* Фокус элементов */
 .btn:focus, .btn-link.nav-link:focus, .form-control:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-focus) !important;
+    border-color: var(--accent-color);
 }
 
-/* Кастомные ссылки */
+/* Кастомные ссылки внутри контента */
 a {
-    color: #0077cc;
+    color: var(--accent-color);
     text-decoration: none;
+    transition: color 0.15s ease;
 }
 
     a:hover {
+        color: var(--accent-hover);
         text-decoration: underline;
     }
