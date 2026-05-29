@@ -10,8 +10,9 @@ namespace SmartPlanner.Models
         [Required]
         public long UserId { get; set; }
 
-        [Required]
-        [StringLength(150)]
+        [Required(ErrorMessage = "Пожалуйста, введите название.")]
+        [StringLength(150, ErrorMessage = "Название не может превышать 150 символов.")]
+        [Display(Name = "Название")]
         public string Title { get; set; } = string.Empty;
 
         public string? Description { get; set; }
@@ -20,7 +21,8 @@ namespace SmartPlanner.Models
 
         public long? LifeAreaId { get; set; }
 
-        [Range(1, 5)]
+        [Range(1, 5, ErrorMessage = "Уровень энергозатратности должен быть от 1 до 5.")]
+        [Display(Name = "Энергозатратность (1-5)")]
         public int EnergyRequired { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,25 +1,18 @@
-/* ==========================================================================
-   1. Новая цветовая палитра приложения (Переменные для удобства)
-   ========================================================================== */
+
 :root {
-    --bg-main: #f4f6f8; /* Мягкий светлый фон для контента (вместо #f8f9fa) */
-    --bg-card: #ffffff; /* Чистый белый для блоков, карточек и шапки */
-    /* Сайдбар: глубокий грифельный с легким сине-зеленым подтоном */
-    --bg-sidebar: #1e262f; /* Основной фон сайдбара */
-    --bg-sidebar-dark: #161c22; /* Хедер и юзер-секция сайдбара */
-    --text-sidebar-muted: #8a99a8; /* Неактивные пункты меню */
-    /* Акцентный цвет (вместо дефолтного синего) — благородный изумрудно-шалфейный */
-    --accent-color: #2a7f60; /* Основной акцент (кнопки, активные вкладки) */
-    --accent-hover: #206149; /* Кнопки при наведении */
-    --accent-light: #e6f2ed; /* Фоновое выделение активных элементов (nav-pills) */
+    --bg-main: #f4f6f8;
+    --bg-card: #ffffff;
+    --bg-sidebar: #1e262f;
+    --bg-sidebar-dark: #161c22;
+    --text-sidebar-muted: #8a99a8;
+    --accent-color: #2a7f60;
+    --accent-hover: #206149;
+    --accent-light: #e6f2ed;
     --accent-focus: rgba(42, 127, 96, 0.25);
-    --border-color: #e2e8f0; /* Тонкие аккуратные границы */
-    --text-main: #334155; /* Основной текст контента (мягкий темно-серый) */
+    --border-color: #e2e8f0;
+    --text-main: #334155;
 }
 
-/* ==========================================================================
-   2. Общие настройки страницы
-   ========================================================================== */
 html {
     font-size: 14px;
     height: 100%;
@@ -44,9 +37,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* ==========================================================================
-   3. Настройки обертки и сайдбара
-   ========================================================================== */
 #wrapper {
     display: flex;
     width: 100%;
@@ -84,7 +74,7 @@ body {
         }
 
     #sidebar ul.components {
-        padding: 20px 12px; /* Небольшой отступ по бокам для эффекта "плавающих" кнопок */
+        padding: 20px 12px; 
     }
 
     #sidebar ul li {
@@ -96,7 +86,7 @@ body {
             display: block;
             color: var(--text-sidebar-muted);
             text-decoration: none;
-            border-radius: 8px; /* Современные скругленные пункты меню */
+            border-radius: 8px; 
             font-weight: 500;
             transition: all 0.2s ease;
         }
@@ -106,7 +96,6 @@ body {
                 vertical-align: middle;
             }
 
-            /* Эффект при наведении и активный пункт */
             #sidebar ul li a:hover {
                 color: #fff;
                 background: rgba(255, 255, 255, 0.05);
@@ -118,7 +107,6 @@ body {
             box-shadow: 0 4px 12px rgba(42, 127, 96, 0.3);
         }
 
-/* Блок пользователя внизу сайдбара */
 .user-section {
     margin-top: auto;
     padding: 20px;
@@ -138,9 +126,6 @@ body {
         font-size: 0.95rem;
     }
 
-/* ==========================================================================
-   4. Основной контент справа
-   ========================================================================== */
 #content {
     flex-grow: 1;
     display: flex;
@@ -163,10 +148,7 @@ main[role="main"] {
     padding: 24px;
 }
 
-/* ==========================================================================
-   5. Переопределение стандартных компонентов и кнопок
-   ========================================================================== */
-/* Кнопки */
+
 .btn-primary {
     color: #fff;
     background-color: var(--accent-color);
@@ -183,7 +165,6 @@ main[role="main"] {
         box-shadow: 0 4px 12px rgba(42, 127, 96, 0.2) !important;
     }
 
-/* Навигация в шапке (Главная / История изменений) */
 .nav-pills .nav-link {
     color: var(--text-main);
     font-weight: 500;
@@ -199,17 +180,15 @@ main[role="main"] {
 
     .nav-pills .nav-link.active {
         color: var(--accent-color);
-        background-color: var(--accent-light); /* Нежное фоновое выделение вместо агрессивного синего */
+        background-color: var(--accent-light);
         font-weight: 600;
     }
 
-/* Фокус элементов */
 .btn:focus, .btn-link.nav-link:focus, .form-control:focus {
     box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-focus) !important;
     border-color: var(--accent-color);
 }
 
-/* Кастомные ссылки внутри контента */
 a {
     color: var(--accent-color);
     text-decoration: none;
@@ -219,4 +198,22 @@ a {
     a:hover {
         color: var(--accent-hover);
         text-decoration: underline;
+    }
+
+.form-range {
+    height: 6px;
+    background: #dee2e6;
+    border-radius: 5px;
+    background-image: linear-gradient(var(--accent-color), var(--accent-color));
+    background-repeat: no-repeat;
+    background-size: var(--progress-size) 100%;
+}
+
+    .form-range::-webkit-slider-thumb {
+        appearance: none;
+        height: 18px;
+        width: 18px;
+        background: var(--accent-color);
+        border-radius: 50%;
+        cursor: pointer;
     }

@@ -87,8 +87,6 @@ namespace SmartPlanner.Controllers
             if (entry == null)
                 return NotFound();
 
-            // Из JS (.toISOString()) гарантированно приходит UTC время.
-            // Приводим к UniversalTime и явно размечаем как Utc для Npgsql
             var newStart = DateTime.SpecifyKind(start.ToUniversalTime(), DateTimeKind.Utc);
             var newEnd = DateTime.SpecifyKind(end.ToUniversalTime(), DateTimeKind.Utc);
 

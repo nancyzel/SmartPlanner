@@ -10,14 +10,20 @@ namespace SmartPlanner.Models
         [Required]
         public long UserId { get; set; }
 
-        [Required]
-        [StringLength(100)]
+        [Required(ErrorMessage = "Пожалуйста, введите название сферы жизни.")]
+        [StringLength(100, ErrorMessage = "Название не может превышать 100 символов.")]
+        [Display(Name = "Название сферы жизни")]
         public string Name { get; set; } = string.Empty;
 
-        [StringLength(7)]
+        [StringLength(
+            7,
+            ErrorMessage = "Код цвета должен быть в формате HEX (например, #FFFFFF) и не длиннее 7 символов."
+        )]
+        [Display(Name = "Цвет маркера")]
         public string? Color { get; set; }
 
-        [Range(1, 5)]
+        [Range(1, 5, ErrorMessage = "Приоритет сферы должен быть в диапазоне от 1 до 5.")]
+        [Display(Name = "Приоритет сферы")]
         public int Priority { get; set; }
 
         public bool IsActive { get; set; } = true;

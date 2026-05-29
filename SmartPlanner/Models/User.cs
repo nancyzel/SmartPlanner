@@ -7,18 +7,21 @@ namespace SmartPlanner.Models
     {
         public long Id { get; set; }
 
-        [Required]
-        [StringLength(100)]
+        [Required(ErrorMessage = "Пожалуйста, введите ваше полное имя.")]
+        [StringLength(100, ErrorMessage = "Имя не может превышать 100 символов.")]
+        [Display(Name = "Полное имя")]
         public string FullName { get; set; } = string.Empty;
 
-        [StringLength(30)]
+        [StringLength(30, ErrorMessage = "Короткое имя не может превышать 30 символов.")]
         public string? ShortName { get; set; }
 
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Пожалуйста, укажите адрес электронной почты.")]
+        [EmailAddress(ErrorMessage = "Введен некорректный формат Email.")]
+        [Display(Name = "Электронная почта")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
+        [Required(ErrorMessage = "Пароль обязателен для заполнения.")]
+        [Display(Name = "Пароль")]
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required]

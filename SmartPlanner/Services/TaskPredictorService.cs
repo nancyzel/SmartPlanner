@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ML;
+using Microsoft.ML.Trainers;
 using SmartPlanner.Models;
 
 namespace SmartPlanner.Services
@@ -11,11 +12,13 @@ namespace SmartPlanner.Services
         private readonly string _modelPath;
         private readonly MLContext _mlContext;
 
+        // Порог переключения алгоритма: до 30 задач используем простую линейную регрессию, после — FastTree
+        private const int TasksThresholdForAdvancedModel = 30;
+
         public TaskPredictorService(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
             _mlContext = new MLContext(seed: 1);
-            // Путь для сохранения обученной модели на сервере
             _modelPath = Path.Combine(env.ContentRootPath, "MLModels", "task_duration_model.zip");
         }
 
@@ -24,11 +27,9 @@ namespace SmartPlanner.Services
         {
             if (!File.Exists(_modelPath))
             {
-                // Если модель еще ни разу не обучалась, возвращаем экспертную оценку пользователя
                 return task.EstimatedDuration;
             }
 
-            // Загружаем обученную модель
             ITransformer trainedModel;
             using (
                 var stream = new FileStream(
@@ -42,13 +43,11 @@ namespace SmartPlanner.Services
                 trainedModel = _mlContext.Model.Load(stream, out _);
             }
 
-            // Создаем движок предсказания
             var predictionEngine = _mlContext.Model.CreatePredictionEngine<
                 TaskPredictorInput,
                 TaskPredictorOutput
             >(trainedModel);
 
-            // Формируем входные данные
             var input = new TaskPredictorInput
             {
                 Priority = task.Priority,
@@ -57,10 +56,14 @@ namespace SmartPlanner.Services
                 EstimatedDuration = task.EstimatedDuration,
             };
 
-            // Предсказываем
             var prediction = predictionEngine.Predict(input);
-
             int predicted = Math.Max(5, (int)Math.Round(prediction.PredictedDuration));
+
+            // Защита от нереалистичных выбросов ИИ (особенно актуально на малых выборках)
+            if (predicted < 5 || predicted > (task.EstimatedDuration * 3))
+            {
+                return task.EstimatedDuration;
+            }
 
             if (Math.Abs(predicted - task.EstimatedDuration) < 5)
             {
@@ -70,36 +73,40 @@ namespace SmartPlanner.Services
             return predicted;
         }
 
-        // 2. Метод обучения модели на основе истории выполненных задач
+        // 2. Метод адаптивного обучения модели
         public async Task TrainModelAsync()
         {
-            // Берем только выполненные задачи, где заполнено реальное время выполнения
             var completedTasks = await _context
-                .Tasks.Where(t =>
+                .Tasks.Include(t => t.MLTrainingData)
+                .Where(t =>
                     t.Status == Models.Enums.TaskStatusType.Done && t.ActualDuration.HasValue
                 )
                 .ToListAsync();
 
-            // Модели нужно хотя бы 5-10 примеров для минимального обучения
+            // Абсолютный минимум для построения базовой математической регрессии
             if (completedTasks.Count < 5)
                 return;
 
-            // Преобразуем данные из БД в формат для ML
             var trainingData = completedTasks
-                .Select(t => new TaskPredictorInput
+                .Where(t => t.MLTrainingData.Any())
+                .Select(t =>
                 {
-                    Priority = t.Priority,
-                    EnergyRequired = t.EnergyRequired,
-                    LifeAreaId = t.LifeAreaId ?? 0,
-                    EstimatedDuration = t.EstimatedDuration,
-                    ActualDuration = (float)t.ActualDuration.Value,
+                    var mlLog = t.MLTrainingData.OrderByDescending(m => m.CreatedAt).First();
+
+                    return new TaskPredictorInput
+                    {
+                        Priority = t.Priority,
+                        EnergyRequired = t.EnergyRequired,
+                        LifeAreaId = t.LifeAreaId ?? 0,
+                        EstimatedDuration = mlLog.UserOriginalDuration,
+                        ActualDuration = (float)t.ActualDuration.Value,
+                    };
                 })
                 .ToList();
 
             IDataView dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
 
-            // Построение конвейера (Pipeline) обучения
-            // Шаг 1: Объединяем признаки в один вектор "Features"
+            // Базовая подготовка признаков (склеивание и обязательная нормализация масштабов)
             var pipeline = _mlContext
                 .Transforms.Concatenate(
                     "Features",
@@ -108,17 +115,35 @@ namespace SmartPlanner.Services
                     nameof(TaskPredictorInput.LifeAreaId),
                     nameof(TaskPredictorInput.EstimatedDuration)
                 )
-                // Шаг 2: Выбираем алгоритм регрессии (FastTree — один из лучших для таких задач)
-                .Append(
+                .Append(_mlContext.Transforms.NormalizeMinMax("Features"));
+
+            IEstimator<ITransformer> trainingPipeline;
+
+            // ДИНАМИЧЕСКИЙ ВЫБОР АЛГОРИТМА
+            if (trainingData.Count < TasksThresholdForAdvancedModel)
+            {
+                // ЭТАП 1: Мало данных. Идеально подходит Ordinary Least Squares (OLS).
+                // Он строит жесткую прямую линию тренда, не переобучается на шумах и не скатывается к константе.
+                trainingPipeline = pipeline.Append(
+                    _mlContext.Regression.Trainers.Ols(
+                        labelColumnName: nameof(TaskPredictorInput.ActualDuration)
+                    )
+                );
+            }
+            else
+            {
+                // ЭТАП 2: Данных достаточно. Подключаем мощный нелинейный алгоритм FastTree.
+                // На больших выборках ансамбли решающих деревьев отлично находят скрытые паттерны поведения пользователя.
+                trainingPipeline = pipeline.Append(
                     _mlContext.Regression.Trainers.FastTree(
                         labelColumnName: nameof(TaskPredictorInput.ActualDuration)
                     )
                 );
+            }
 
-            // Обучаем модель
-            var model = pipeline.Fit(dataView);
+            // Обучаем выбранную конфигурацию конвейера
+            var model = trainingPipeline.Fit(dataView);
 
-            // Создаем папку, если её нет, и сохраняем модель в zip-файл
             var directory = Path.GetDirectoryName(_modelPath);
             if (!Directory.Exists(directory))
                 Directory.CreateDirectory(directory!);

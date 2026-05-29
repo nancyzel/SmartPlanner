@@ -9,11 +9,13 @@ namespace SmartPlanner.Models
         [Required]
         public long UserId { get; set; }
 
-        [Required]
-        [StringLength(100)]
+        [Required(ErrorMessage = "Пожалуйста, укажите название места.")]
+        [StringLength(100, ErrorMessage = "Название места не может превышать 100 символов.")]
+        [Display(Name = "Название локации")]
         public string Name { get; set; } = string.Empty;
 
-        [StringLength(150)]
+        [StringLength(150, ErrorMessage = "Адрес не может превышать 150 символов.")]
+        [Display(Name = "Адрес")]
         public string? Address { get; set; }
 
         public TimeSpan? OpeningTime { get; set; }

@@ -10,6 +10,9 @@ namespace SmartPlanner.Models
         public long TaskItemId { get; set; }
 
         [Range(1, 1440)]
+        public int UserOriginalDuration { get; set; }
+
+        [Range(1, 1440)]
         public int PredictedDuration { get; set; }
 
         [Range(1, 1440)]

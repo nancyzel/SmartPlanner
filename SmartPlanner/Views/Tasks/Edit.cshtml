@@ -20,6 +20,13 @@
                     <input asp-for="Title" class="form-control" />
                     <span asp-validation-for="Title" class="text-danger"></span>
                 </div>
+                <div class="mb-3">
+                    <label asp-for="LifeAreaId" class="form-label">Область жизни</label>
+                    <select asp-for="LifeAreaId" class="form-select" asp-items="ViewBag.LifeAreas">
+                        <option value="">-- Выберите область --</option>
+                    </select>
+                    <span asp-validation-for="LifeAreaId" class="text-danger"></span>
+                </div>
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -28,8 +35,8 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label asp-for="ProgressPercent" class="form-label">Прогресс (%)</label>
-                        <input asp-for="ProgressPercent" type="range" class="form-range" min="0" max="100" />
-                        <div class="text-center small">@Model.ProgressPercent %</div>
+                        <input asp-for="ProgressPercent" id="progressRange" type="range" class="form-range" min="0" max="100" />
+                        <div class="text-center small font-weight-bold" id="progressValue">@Model.ProgressPercent %</div>
                     </div>
                 </div>
 
@@ -69,4 +76,20 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        const rangeInput = document.getElementById('progressRange');
+        const displayValue = document.getElementById('progressValue');
+
+        function updateProgressStyle() {
+            const value = rangeInput.value;
+
+            displayValue.textContent = value + ' %';
+
+            rangeInput.style.backgroundSize = value + '% 100%';
+        }
+
+        rangeInput.addEventListener('input', updateProgressStyle);
+
+        updateProgressStyle();
+    </script>
 }

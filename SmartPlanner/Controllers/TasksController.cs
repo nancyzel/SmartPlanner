@@ -61,7 +61,7 @@ namespace SmartPlanner.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(TaskItem task)
+        public async Task<IActionResult> Create(TaskItem task, int? OriginalEstimatedDuration)
         {
             ModelState.Remove(nameof(task.User));
             ModelState.Remove(nameof(task.LifeArea));
@@ -73,19 +73,27 @@ namespace SmartPlanner.Controllers
                 task.Type = ActivityType.Task;
                 task.CreatedAt = DateTime.UtcNow;
                 task.UpdatedAt = DateTime.UtcNow;
+
                 if (task.Deadline.HasValue)
                     task.Deadline = TimeZoneInfo.ConvertTimeToUtc(
                         DateTime.SpecifyKind(task.Deadline.Value, DateTimeKind.Unspecified),
                         userTimeZone
                     );
-                int mlPredictedDuration = _mlService.PredictDuration(task);
-                int userPredictedDuration = task.EstimatedDuration;
-                bool isPredictionDifferent = mlPredictedDuration != userPredictedDuration;
 
-                if (isPredictionDifferent)
-                {
-                    task.EstimatedDuration = mlPredictedDuration;
-                }
+                // Если пользователь принял ИИ-совет, изначальная оценка придет из скрытого поля JS.
+                // Если не принимал — изначальная оценка равна тому, что сейчас в task.EstimatedDuration.
+                int originalDuration = OriginalEstimatedDuration ?? task.EstimatedDuration;
+
+                // Делаем финальный прогноз на основе ИЗНАЧАЛЬНЫХ данных
+                int mlPredictedDuration = _mlService.PredictDuration(
+                    new TaskItem
+                    {
+                        Priority = task.Priority,
+                        EnergyRequired = task.EnergyRequired,
+                        LifeAreaId = task.LifeAreaId,
+                        EstimatedDuration = originalDuration,
+                    }
+                );
 
                 _context.Tasks.Add(task);
                 await _context.SaveChangesAsync();
@@ -94,19 +102,16 @@ namespace SmartPlanner.Controllers
                 {
                     TaskItemId = task.Id,
                     PredictedDuration = mlPredictedDuration,
-                    ActualDuration = task.EstimatedDuration,
+                    UserOriginalDuration = originalDuration, // Сохраняем в новое поле
+                    ActualDuration = task.EstimatedDuration, // Временная заглушка до завершения задачи
                     PredictionError = 0,
                 };
                 _context.MLTrainingData.Add(mlLog);
                 await _context.SaveChangesAsync();
 
-                if (isPredictionDifferent)
-                {
-                    TempData["MLPrediction"] =
-                        $"AI-Ассистент: Мы скорректировали ваш прогноз с {userPredictedDuration} на {mlPredictedDuration} мин. на основе анализа ваших прошлых задач.";
-                }
-
                 await _log.LogAsync(ActionType.Create, "Задача", task.Id);
+
+                // Удаляем TempData с сообщением, так как теперь диалог происходит в интерфейсе
                 return RedirectToAction(nameof(Index));
             }
             ViewBag.LifeAreas = new SelectList(
@@ -135,7 +140,8 @@ namespace SmartPlanner.Controllers
             ViewBag.LifeAreas = new SelectList(
                 _context.LifeAreas.Where(u => u.UserId == CurrentUserId),
                 "Id",
-                "Name"
+                "Name",
+                task.LifeAreaId
             );
             return View(task);
         }
@@ -235,7 +241,8 @@ namespace SmartPlanner.Controllers
             ViewBag.LifeAreas = new SelectList(
                 _context.LifeAreas.Where(u => u.UserId == CurrentUserId),
                 "Id",
-                "Name"
+                "Name",
+                task.LifeAreaId
             );
             return View(task);
         }
@@ -256,5 +263,30 @@ namespace SmartPlanner.Controllers
             }
             return RedirectToAction(nameof(Index));
         }
+
+        // Эндпоинт для AJAX запросов из формы создания
+        [HttpPost]
+        [IgnoreAntiforgeryToken] // Упрощает вызов из JS
+        public IActionResult GetAIPrediction([FromBody] PredictRequestDto request)
+        {
+            var dummyTask = new TaskItem
+            {
+                Priority = request.Priority,
+                EnergyRequired = request.EnergyRequired,
+                LifeAreaId = request.LifeAreaId,
+                EstimatedDuration = request.EstimatedDuration,
+            };
+
+            int predicted = _mlService.PredictDuration(dummyTask);
+            return Json(new { predictedDuration = predicted });
+        }
+    }
+
+    public class PredictRequestDto
+    {
+        public int Priority { get; set; }
+        public int EnergyRequired { get; set; }
+        public long? LifeAreaId { get; set; }
+        public int EstimatedDuration { get; set; }
     }
 }

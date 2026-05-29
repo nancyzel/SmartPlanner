@@ -5,8 +5,12 @@ namespace SmartPlanner.Models
 {
     public class Event : Activity
     {
+        [Required(ErrorMessage = "Укажите время начала мероприятия.")]
+        [Display(Name = "Время начала")]
         public DateTime StartTime { get; set; }
 
+        [Required(ErrorMessage = "Укажите время окончания мероприятия.")]
+        [Display(Name = "Время окончания")]
         public DateTime EndTime { get; set; }
 
         public long? LocationId { get; set; }
